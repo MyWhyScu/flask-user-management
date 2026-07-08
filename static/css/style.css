@@ -215,3 +215,74 @@ body {
     color: #c0392b;
     border: 1px solid #f5c6cb;
 }
+
+.alert-success {
+    background-color: #e8f8e8;
+    color: #27ae60;
+    border: 1px solid #b8e6b8;
+}
+
+/* 搜索区域 */
+.search-section {
+    margin: 20px 0;
+    padding: 16px 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.search-results {
+    margin-top: 16px;
+}
+
+.no-result {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    font-size: 14px;
+}
+
+/* 搜索结果表格 */
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+.result-table th {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.result-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.result-table tr:hover td {
+    background-color: #f8f9ff;
+}

@@ -12,7 +12,17 @@
             <li><span class="info-label">角色：</span>{{ user.role }}</li>
             <li><span class="info-label">余额：</span>{{ user.balance }}</li>
         </ul>
-        <form method="POST" action="/logout" style="display:inline">
+
+        <!-- 搜索功能 -->
+        <div class="search-section">
+            <h3>搜索用户</h3>
+            <form method="GET" action="/" class="search-form">
+                <input type="text" name="keyword" class="search-input" placeholder="搜索用户名或邮箱..." value="{{ keyword }}" required>
+                <button type="submit" class="btn btn-primary">搜索</button>
+            </form>
+        </div>
+
+        <form method="POST" action="/logout" style="display:inline; margin-top:16px;">
             <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
             <button type="submit" class="btn btn-danger">退出登录</button>
         </form>
@@ -23,5 +33,36 @@
         <p>您还没有登录，请先登录系统查看用户信息。</p>
         <a href="/login" class="btn btn-primary">前往登录</a>
     </div>
+{% endif %}
+
+<!-- 搜索结果区域（独立于登录状态） -->
+{% if search_results is not none %}
+<div class="card search-results-card">
+    <h3>搜索结果（关键词：{{ keyword }}）</h3>
+    {% if search_results|length > 0 %}
+        <table class="result-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>邮箱</th>
+                    <th>手机</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in search_results %}
+                <tr>
+                    <td>{{ row[0] }}</td>
+                    <td>{{ row[1] }}</td>
+                    <td>{{ row[2] }}</td>
+                    <td>{{ row[3] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-result">无搜索结果</div>
+    {% endif %}
+</div>
 {% endif %}
 {% endblock %}
