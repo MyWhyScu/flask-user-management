@@ -22,10 +22,14 @@
             </form>
         </div>
 
-        <form method="POST" action="/logout" style="display:inline; margin-top:16px;">
-            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
-            <button type="submit" class="btn btn-danger">退出登录</button>
-        </form>
+        <!-- 快捷入口 -->
+        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+            <a href="/upload" class="btn btn-primary">上传头像</a>
+            <form method="POST" action="/logout" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <button type="submit" class="btn btn-danger">退出登录</button>
+            </form>
+        </div>
     </div>
 {% else %}
     <div class="card">

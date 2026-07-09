@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card" style="max-width:520px; margin:0 auto;">
+    <h2>上传头像</h2>
+
+    {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/upload" enctype="multipart/form-data" class="upload-form">
+        <div class="form-group">
+            <label for="file">选择文件</label>
+            <input type="file" id="file" name="file" class="file-input" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">上 传</button>
+    </form>
+
+    {% if uploaded %}
+        <div class="upload-success">
+            <h3>上传成功！</h3>
+            <div class="preview-box">
+                <img src="{{ file_url }}" alt="头像预览" class="avatar-preview">
+            </div>
+            <p class="file-link-text">
+                文件链接：<code><a href="{{ file_url }}" target="_blank">{{ file_url }}</a></code>
+            </p>
+            <form method="POST" action="/delete-file" style="margin-top:12px;">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <input type="hidden" name="filename" value="{{ filename }}">
+                <button type="submit" class="btn btn-danger" style="font-size:13px; padding:6px 16px;">删除此文件</button>
+            </form>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -286,3 +286,69 @@ body {
 .result-table tr:hover td {
     background-color: #f8f9ff;
 }
+
+/* 上传页面 */
+.upload-form {
+    margin-top: 8px;
+}
+
+.file-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fafafa;
+    outline: none;
+}
+
+.upload-success {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+
+.upload-success h3 {
+    color: #27ae60;
+    margin-bottom: 16px;
+}
+
+.preview-box {
+    margin: 16px auto;
+    max-width: 200px;
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+    padding: 8px;
+    background: #fafafa;
+}
+
+.avatar-preview {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+}
+
+.file-link-text {
+    font-size: 13px;
+    color: #888;
+    word-break: break-all;
+    margin-top: 12px;
+}
+
+.file-link-text code {
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.file-link-text a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.file-link-text a:hover {
+    text-decoration: underline;
+}
