@@ -21,3 +21,6 @@ certs/
 # OS
 .DS_Store
 Thumbs.db
+*.backup
+static/uploads/*
+data/*.db
