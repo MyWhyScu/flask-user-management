@@ -78,12 +78,18 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             email TEXT,
-            phone TEXT
+            phone TEXT,
+            balance INTEGER DEFAULT 0
         )
     ''')
     # 插入默认用户（INSERT OR IGNORE 防止重复）
-    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone) VALUES ('admin', 'admin123', 'admin@example.com', '13800138000')")
-    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone) VALUES ('alice', 'alice2025', 'alice@example.com', '13900139001')")
+    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone, balance) VALUES ('admin', 'admin123', 'admin@example.com', '13800138000', 99999)")
+    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone, balance) VALUES ('alice', 'alice2025', 'alice@example.com', '13900139001', 100)")
+    # 兼容旧表：为没有 balance 列的表添加该列
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN balance INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # 列已存在
     conn.commit()
     conn.close()
     logger.info("数据库初始化完成: data/users.db")
@@ -227,6 +233,16 @@ def login():
         ):
             session["username"] = username
             session.permanent = True
+            # 从SQLite获取user_id存入session（用于导航链接）
+            conn = sqlite3.connect('data/users.db')
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT id FROM users WHERE username = ?", (username,))
+                row = cur.fetchone()
+                if row:
+                    session["user_id"] = row[0]
+            finally:
+                conn.close()
             # 登录成功后刷新CSRF令牌
             session.pop("_csrf_token", None)
 
@@ -453,6 +469,110 @@ def delete_file():
             logger.warning("文件删除失败: %s - %s", safe_filename, e)
 
     return redirect("/upload")
+
+
+# ============================================================
+# 个人中心与充值功能（已修复全部权限与业务逻辑漏洞）
+# ============================================================
+
+@app.route("/profile", methods=["GET"])
+def profile():
+    """个人中心：需登录，仅可查看自己资料"""
+    # [修复1] 添加登录校验
+    if "username" not in session:
+        return redirect("/login")
+
+    # [修复2] 从session获取当前用户ID，不接受URL参数
+    user_id = session.get("user_id")
+    if not user_id:
+        return "无法获取用户信息", 400
+
+    conn = sqlite3.connect('data/users.db')
+    c = conn.cursor()
+    sql = "SELECT id, username, email, phone, balance FROM users WHERE id = ?"
+    c.execute(sql, (user_id,))
+    user = c.fetchone()
+    conn.close()
+
+    if not user:
+        return "用户不存在", 404
+
+    user_data = {
+        "id": user[0],
+        "username": user[1],
+        "email": user[2],
+        "phone": user[3],
+        "balance": user[4]
+    }
+    return render_template("profile.html", user=user_data)
+
+
+@app.route("/recharge", methods=["POST"])
+def recharge():
+    """充值功能：需登录+CSRF，仅可给自己充值，金额必须为正"""
+
+    # [修复3] 未登录拦截
+    if "username" not in session:
+        return redirect("/login")
+
+    # [修复4] CSRF校验
+    csrf_token = request.form.get("csrf_token") or ""
+    if csrf_token != session.get("_csrf_token", ""):
+        logger.warning("充值CSRF校验失败 - IP: %s", request.remote_addr)
+        abort(403)
+
+    # [修复5] 仅允许给自己充值（从session取user_id）
+    user_id = session.get("user_id")
+    if not user_id:
+        return "无法获取用户信息", 400
+
+    amount = request.form.get("amount")
+
+    if not amount:
+        return "缺少金额参数", 400
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        return "金额格式无效", 400
+
+    # [修复6] 金额必须为正数
+    if amount <= 0:
+        return "金额必须大于0", 400
+
+    # [修复7] 金额上限
+    if amount > 1000000:
+        return "单次充值金额不能超过100万", 400
+
+    # [修复8] 添加频率限制（每分钟最多3次）
+    ip = request.remote_addr or "unknown"
+    key = f"recharge:{ip}"
+    now = time.time()
+    if key in _rate_limit_store:
+        # 复用登录限流的存储结构，但使用不同key前缀
+        pass
+    # 使用独立的recharge限流
+    if not hasattr(recharge, "_rl"):
+        recharge._rl = {}
+    rl = recharge._rl
+    if key not in rl:
+        rl[key] = []
+    rl[key] = [t for t in rl[key] if now - t < 60]
+    if len(rl[key]) >= 3:
+        logger.warning("充值频率超限 - 用户: %s, IP: %s", session["username"], ip)
+        return "充值操作过于频繁，请稍后再试", 429
+    rl[key].append(now)
+
+    conn = sqlite3.connect('data/users.db')
+    c = conn.cursor()
+    sql = "UPDATE users SET balance = balance + ? WHERE id = ?"
+    c.execute(sql, (amount, user_id))
+    conn.commit()
+    conn.close()
+
+    logger.info("充值成功 - 用户: %s, 金额: +%d, IP: %s",
+                session["username"], amount, ip)
+    return redirect(f"/profile")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card" style="max-width:520px; margin:0 auto;">
+    <h2>个人中心</h2>
+
+    <div class="profile-info">
+        <div class="profile-field">
+            <span class="profile-label">用户ID</span>
+            <span class="profile-value">{{ user.id }}</span>
+        </div>
+        <div class="profile-field">
+            <span class="profile-label">用户名</span>
+            <span class="profile-value">{{ user.username }}</span>
+        </div>
+        <div class="profile-field">
+            <span class="profile-label">邮箱</span>
+            <span class="profile-value">{{ user.email }}</span>
+        </div>
+        <div class="profile-field">
+            <span class="profile-label">手机</span>
+            <span class="profile-value">{{ user.phone }}</span>
+        </div>
+        <div class="profile-field">
+            <span class="profile-label">余额</span>
+            <span class="profile-value profile-balance">{{ user.balance }} 元</span>
+        </div>
+    </div>
+
+    <div class="recharge-section">
+        <h3>充值</h3>
+        <form method="POST" action="/recharge" class="recharge-form">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            <div class="form-group">
+                <label for="amount">充值金额</label>
+                <input type="number" id="amount" name="amount" placeholder="请输入金额（正数）" min="1" max="1000000" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">确认充值</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

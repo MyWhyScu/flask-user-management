@@ -352,3 +352,50 @@ body {
 .file-link-text a:hover {
     text-decoration: underline;
 }
+
+/* 个人中心 */
+.profile-info {
+    margin-bottom: 24px;
+}
+
+.profile-field {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 15px;
+}
+
+.profile-field:last-child {
+    border-bottom: none;
+}
+
+.profile-label {
+    color: #888;
+    font-weight: 600;
+}
+
+.profile-value {
+    color: #333;
+}
+
+.profile-balance {
+    color: #e74c3c;
+    font-weight: 700;
+    font-size: 17px;
+}
+
+.recharge-section {
+    padding-top: 20px;
+    border-top: 2px solid #eee;
+}
+
+.recharge-section h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: #555;
+}
+
+.recharge-form {
+    margin-top: 8px;
+}
