@@ -26,6 +26,7 @@
         <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
             <a href="/profile" class="btn btn-primary">个人中心</a>
             <a href="/upload" class="btn btn-primary">上传头像</a>
+            <a href="/page?name=help" class="btn btn-primary">帮助中心</a>
             <form method="POST" action="/logout" style="display:inline;">
                 <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
                 <button type="submit" class="btn btn-danger">退出登录</button>
@@ -67,6 +68,18 @@
         </table>
     {% else %}
         <div class="no-result">无搜索结果</div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- 动态页面内容区域 -->
+{% if page_content is not none %}
+<div class="card page-content-card">
+    {% if page_content == "页面不存在" %}
+        <h2>页面不存在</h2>
+        <p>您请求的页面不存在。</p>
+    {% else %}
+        {{ page_content }}
     {% endif %}
 </div>
 {% endif %}

@@ -24,3 +24,5 @@ Thumbs.db
 *.backup
 static/uploads/*
 data/*.db
+.claude/
+build_*.py

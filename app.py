@@ -575,6 +575,42 @@ def recharge():
     return redirect(f"/profile")
 
 
+# ============================================================
+# 动态页面加载功能
+# ============================================================
+
+@app.route("/page", methods=["GET"])
+def dynamic_page():
+    """动态加载页面内容（已修复：限制目录范围、禁止路径穿越）"""
+    name = request.args.get("name", "")
+    if not name:
+        return "请指定页面名称", 400
+
+    # 修复：自动补全 .html 后缀，仅允许读取 .html 文件
+    if not name.endswith(".html"):
+        name = name + ".html"
+
+    # 修复：使用 abspath 校验路径是否在 pages 目录范围内
+    base_dir = os.path.abspath("pages")
+    filepath = os.path.abspath(os.path.join(base_dir, name))
+
+    # 修复：检查最终路径是否在 pages 目录内（防止路径穿越）
+    if not filepath.startswith(base_dir + os.sep):
+        logger.warning("路径穿越尝试被拦截 - name: %s, IP: %s",
+                       name, request.remote_addr)
+        return "页面不存在", 404
+
+    page_content = None
+
+    if os.path.exists(filepath) and os.path.isfile(filepath):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            page_content = f.read()
+    else:
+        page_content = "页面不存在"
+
+    return render_template("index.html", user=None, page_content=page_content)
+
+
 if __name__ == "__main__":
     # 初始化 SQLite 数据库
     init_db()
