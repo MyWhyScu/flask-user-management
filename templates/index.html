@@ -79,7 +79,7 @@
         <h2>页面不存在</h2>
         <p>您请求的页面不存在。</p>
     {% else %}
-        {{ page_content }}
+        {{ page_content | safe }}
     {% endif %}
 </div>
 {% endif %}

@@ -399,3 +399,41 @@ body {
 .recharge-form {
     margin-top: 8px;
 }
+
+/* 帮助中心页面 */
+.help-container {
+    line-height: 1.8;
+}
+
+.help-container h2 {
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+.help-section {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.help-section:last-child {
+    border-bottom: none;
+}
+
+.help-section h3 {
+    font-size: 15px;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.help-section p {
+    font-size: 14px;
+    color: #555;
+    margin: 0;
+}
+
+.page-content-card {
+    margin-top: 20px;
+}
