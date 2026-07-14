@@ -8,8 +8,8 @@
 ## 📋 项目简介
 
 简易用户信息管理平台，包含**登录、注册、用户搜索、头像上传、个人中心、充值、信息展示、登出**功能。  
-本项目从**存在多个安全漏洞的初始版本**开始，历经 **五个阶段安全加固**，累计修复 **49 项安全隐患**。
-覆盖了初期安全配置、SQL注入、文件上传、权限提升与业务逻辑、文件包含漏洞等 Web 安全核心领域。
+本项目从**存在多个安全漏洞的初始版本**开始，历经 **六个阶段安全加固**，累计修复 **52 项安全隐患**。
+覆盖了初期安全配置、SQL注入、文件上传、权限提升与业务逻辑、文件包含、CSRF跨站请求伪造等 Web 安全核心领域。
 
 ---
 
@@ -76,7 +76,7 @@ user-management/
 
 ---
 
-## 🛡️ 安全修复清单（五阶段，49项）
+## 🛡️ 安全修复清单（六阶段，52项）
 
 ### 第一阶段：初期安全加固（18项）
 
@@ -170,24 +170,33 @@ c.execute(sql, (f'%{keyword}%',))
 | **44** | **FI-3 上传+LFI链式攻击** | `/upload` + `/page` | 目录锁定阻断链式攻击 |
 | **45** | **FI-4 数据库文件泄露** | `/page` + `data/users.db` | LFI目录锁定阻止读取数据库 |
 
-**修复原理：** 动态页面加载功能中，name 参数直接拼接文件路径导致任意文件读取。修复使用三层防御：
-1. `os.path.abspath()` 规范化路径
-2. 目录前缀校验（防止路径逃逸到 pages/ 之外）
-3. `.html` 后缀自动补全（限制文件类型）
+### 第六阶段：CSRF跨站请求伪造修复（3项）⭐
+
+核心修复：上传CSRF、修改密码CSRF、越权修改密码
+
+| # | 漏洞类型 | 位置 | 修复措施 |
+|---|----------|------|----------|
+| **46** | **CSRF-1 上传接口CSRF** | `/upload` | 后端添加 csrf_token 校验 + 前端添加隐藏字段 |
+| **47** | **CSRF-2 修改密码CSRF** | `/change-password` | 后端添加 csrf_token 校验 + 前端添加隐藏字段 |
+| **48** | **CSRF-3 越权修改密码** | `/change-password` | username 从 session 获取 + 增加原密码验证 |
+
+**修复原理：** CSRF Token 校验 + session 隔离 + 原密码验证，三层防护杜绝跨站请求伪造。
 
 ```python
-# ❌ 修复前
-filepath = os.path.join("pages", name)  # name=../../etc/passwd
-with open(filepath, "r") as f: ...
+# ❌ 修复前：无CSRF、可指定任意username
+csrf_token = request.form.get("csrf_token")  # 不存在
+username = request.form.get("username", "")  # 可越权
 
-# ✅ 修复后
-base_dir = os.path.abspath("pages")
-filepath = os.path.abspath(os.path.join(base_dir, name))
-if not filepath.startswith(base_dir + os.sep):
-    return "页面不存在", 404
+# ✅ 修复后：CSRF校验 + session隔离
+if csrf_token != session.get("_csrf_token"):
+    abort(403)
+username = session.get("username", "")       # 从session获取
+old_password = request.form.get("old_password")
 ```
 
 ---
+
+## 🔍 最终安全扫描结果
 
 ## 🔍 最终安全扫描结果
 
@@ -216,8 +225,12 @@ if not filepath.startswith(base_dir + os.sep):
 16. 安全响应头 (5项)                 ✅ 全部正确
 17. CSRF Token验证                   ✅ 全覆盖
 18. 频率限制                         ✅ 5次/分钟
+【CSRF跨站请求伪造】
+19. 上传接口CSRF                     ✅ Token校验
+20. 修改密码CSRF                     ✅ Token校验
+21. 越权修改密码                      ✅ session隔离+原密码验证
 ─────────────────────────────────────────────
-状态: ✅ 全部49项安全措施已就位
+状态: ✅ 全部52项安全措施已就位
 ```
 
 ---
@@ -236,7 +249,7 @@ if not filepath.startswith(base_dir + os.sep):
 ## 📝 课程作业说明
 
 本项目的初始版本刻意保留常见安全漏洞，用于教学演示。  
-经过 **五个阶段** 安全加固，展示了从基础配置到高级漏洞的完整修复路径。
+经过 **六个阶段** 安全加固，展示了从基础配置到高级漏洞的完整修复路径。
 
 ### 安全修复涉及的知识点
 
@@ -247,6 +260,7 @@ if not filepath.startswith(base_dir + os.sep):
 | 文件上传漏洞（路径穿越/XSS/CSRF等） | 第三阶段 |
 | 权限提升与业务逻辑（IDOR/越权/CSRF/限流） | 第四阶段 |
 | 文件包含漏洞（LFI/模板注入/链式攻击） | 第五阶段 |
+| CSRF跨站请求伪造（Token校验/原密码验证） | 第六阶段 |
 | 信息泄露防护、认证安全、会话保护 | 全阶段 |
 | 暴力破解防护、日志审计 | 全阶段 |
 
@@ -254,8 +268,9 @@ if not filepath.startswith(base_dir + os.sep):
 
 ## 📋 审计报告
 
-项目包含五份 Word 审计报告：
+项目包含六份 Word 审计报告：
 
+- **`CSRF跨站请求伪造安全审计报告.docx`** — CSRF专题（第六阶段核心）
 - **`文件包含漏洞安全审计报告.docx`** — 文件包含专题（第五阶段核心）
 - **`权限提升与业务逻辑漏洞审计报告.docx`** — 权限提升专题（第四阶段核心）
 - **`文件上传漏洞安全审计报告.docx`** — 文件上传专题（第三阶段核心）

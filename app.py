@@ -363,6 +363,12 @@ def upload():
         return redirect("/login")
 
     if request.method == "POST":
+        # [CSRF修复] 添加CSRF Token校验
+        csrf_token = request.form.get("csrf_token") or ""
+        if csrf_token != session.get("_csrf_token", ""):
+            logger.warning("上传CSRF校验失败 - IP: %s", request.remote_addr)
+            abort(403)
+
         file = request.files.get("file")
         if file and file.filename:
             # [FU-1] 路径穿越修复：只取文件名，丢弃路径
@@ -475,6 +481,27 @@ def delete_file():
 # 个人中心与充值功能（已修复全部权限与业务逻辑漏洞）
 # ============================================================
 
+def get_user_info(user_id):
+    """根据user_id查询用户信息"""
+    if not user_id:
+        return None
+    conn = sqlite3.connect('data/users.db')
+    c = conn.cursor()
+    sql = "SELECT id, username, email, phone, balance FROM users WHERE id = ?"
+    c.execute(sql, (user_id,))
+    user = c.fetchone()
+    conn.close()
+    if not user:
+        return None
+    return {
+        "id": user[0],
+        "username": user[1],
+        "email": user[2],
+        "phone": user[3],
+        "balance": user[4]
+    }
+
+
 @app.route("/profile", methods=["GET"])
 def profile():
     """个人中心：需登录，仅可查看自己资料"""
@@ -487,23 +514,10 @@ def profile():
     if not user_id:
         return "无法获取用户信息", 400
 
-    conn = sqlite3.connect('data/users.db')
-    c = conn.cursor()
-    sql = "SELECT id, username, email, phone, balance FROM users WHERE id = ?"
-    c.execute(sql, (user_id,))
-    user = c.fetchone()
-    conn.close()
-
-    if not user:
+    user_data = get_user_info(user_id)
+    if not user_data:
         return "用户不存在", 404
 
-    user_data = {
-        "id": user[0],
-        "username": user[1],
-        "email": user[2],
-        "phone": user[3],
-        "balance": user[4]
-    }
     return render_template("profile.html", user=user_data)
 
 
@@ -573,6 +587,67 @@ def recharge():
     logger.info("充值成功 - 用户: %s, 金额: +%d, IP: %s",
                 session["username"], amount, ip)
     return redirect(f"/profile")
+
+
+# ============================================================
+# 密码修改功能（已修复：添加CSRF保护）
+# ============================================================
+
+@app.route("/change-password", methods=["POST"])
+def change_password():
+    """修改密码"""
+    # 只要登录即可
+    if "username" not in session:
+        return redirect("/login")
+
+    # [CSRF修复] 添加CSRF Token校验
+    csrf_token = request.form.get("csrf_token") or ""
+    if csrf_token != session.get("_csrf_token", ""):
+        logger.warning("修改密码CSRF校验失败 - IP: %s", request.remote_addr)
+        abort(403)
+
+    # [修复] 从session获取当前用户名，不接受外部参数
+    username = session.get("username", "")
+    old_password = request.form.get("old_password", "")
+    new_password = request.form.get("new_password", "")
+
+    if not username or not old_password or not new_password:
+        return "参数不完整", 400
+
+    # 验证原密码
+    password_valid = False
+
+    # 方式1：检查 USERS 字典（admin/alice 使用哈希存储）
+    if username in USERS and check_password_hash(USERS[username]["password"], old_password):
+        password_valid = True
+
+    # 方式2：检查 SQLite 数据库（注册用户使用明文存储）
+    if not password_valid:
+        conn = sqlite3.connect('data/users.db')
+        c = conn.cursor()
+        c.execute("SELECT password FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        if row and row[0] == old_password:
+            password_valid = True
+        conn.close()
+
+    if not password_valid:
+        return render_template("profile.html",
+                               user=get_user_info(session.get("user_id")),
+                               error="原密码错误")
+
+    # 原密码验证通过，更新为新密码
+    conn = sqlite3.connect('data/users.db')
+    c = conn.cursor()
+    sql = "UPDATE users SET password = ? WHERE username = ?"
+    c.execute(sql, (new_password, username))
+    conn.commit()
+    conn.close()
+
+    logger.info("密码修改 - 操作者: %s, 目标用户: %s",
+                session["username"], username)
+
+    return redirect("/profile")
 
 
 # ============================================================
