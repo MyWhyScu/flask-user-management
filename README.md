@@ -223,6 +223,7 @@ if not url.lower().startswith(("http://", "https://")):
 if _is_internal_ip(hostname):
     return "不允许访问内网地址", 400
 # 错误信息脱敏 + CSRF校验
+```
 
 ---
 
@@ -265,8 +266,6 @@ if _is_internal_ip(hostname):
 ─────────────────────────────────────────────
 状态: ✅ 全部56项安全措施已就位
 ```
-
----
 
 ## ⚙️ 技术栈
 
