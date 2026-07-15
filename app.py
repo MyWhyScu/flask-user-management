@@ -4,6 +4,8 @@ import secrets
 import logging
 import time
 import sqlite3
+import urllib.request
+import urllib.error
 from functools import wraps
 from flask import (
     Flask, render_template, request, redirect, session, g, abort
@@ -684,6 +686,126 @@ def dynamic_page():
         page_content = "页面不存在"
 
     return render_template("index.html", user=None, page_content=page_content)
+
+
+# ============================================================
+# URL 抓取功能（已修复：添加SSRF防护、CSRF保护、错误信息脱敏）
+# ============================================================
+
+def _is_internal_ip(host):
+    """判断IP是否为内网地址（含IPv6和链路本地地址）"""
+    import socket
+    try:
+        # 先尝试解析主机名，支持IPv6
+        addrs = socket.getaddrinfo(host, None)
+        for addr_info in addrs:
+            ip = addr_info[4][0]
+            # IPv6 回环 ::1
+            if ip == '::1':
+                return True
+            # IPv4 处理
+            parts = ip.split('.')
+            if len(parts) != 4:
+                # 其他IPv6地址暂不放行（保守策略）
+                if ':' in ip:
+                    return True
+                continue
+            first = int(parts[0])
+            # 127.0.0.0/8    - 回环地址
+            if first == 127:
+                return True
+            # 10.0.0.0/8     - A类私网
+            if first == 10:
+                return True
+            # 172.16.0.0/12  - B类私网
+            if first == 172 and 16 <= int(parts[1]) <= 31:
+                return True
+            # 192.168.0.0/16 - C类私网
+            if first == 192 and parts[1] == '168':
+                return True
+            # 0.0.0.0/8
+            if first == 0:
+                return True
+            # 169.254.0.0/16 - 链路本地地址（含云元数据）
+            if first == 169 and parts[1] == '254':
+                return True
+        return False
+    except Exception:
+        return False
+
+
+@app.route("/fetch-url", methods=["POST"])
+def fetch_url():
+    """抓取用户提交的URL内容（已修复SSRF防护）"""
+    if "username" not in session:
+        return redirect("/login")
+
+    # [SSRF-5] 添加CSRF Token校验
+    csrf_token = request.form.get("csrf_token") or ""
+    if csrf_token != session.get("_csrf_token", ""):
+        logger.warning("抓取URL CSRF校验失败 - IP: %s", request.remote_addr)
+        abort(403)
+
+    url = request.form.get("url", "").strip()
+    if not url:
+        return "请输入 URL", 400
+
+    # [SSRF-1] 限制协议为 http/https
+    if not url.lower().startswith(('http://', 'https://')):
+        # 不允许 file://、ftp://、dict:// 等协议
+        return "不支持的协议类型，仅允许 http/https", 400
+
+    # [SSRF-2] 解析主机名并阻止内网地址
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return "无效的 URL", 400
+        # 检查是否是 localhost 等别名
+        if hostname.lower() in ('localhost', 'localhost.localdomain'):
+            return "不允许访问内网地址", 400
+        # 检查IP是否为内网
+        if _is_internal_ip(hostname):
+            return "不允许访问内网地址", 400
+    except Exception:
+        return "无效的 URL", 400
+
+    status_code = ""
+    content = ""
+
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            status_code = response.status
+            raw = response.read()
+            content = raw.decode('utf-8', errors='replace')
+            # [SSRF-6] 限制返回内容长度
+            if len(content) > 3000:
+                content = content[:3000] + "\n\n... (内容已截断，仅显示前3000字符)"
+    except urllib.error.HTTPError as e:
+        status_code = str(e.code)
+        # [SSRF-3] 错误信息脱敏，不暴露具体原因
+        if status_code.startswith('4') or status_code.startswith('5'):
+            content = f"目标服务器返回错误状态码: {status_code}"
+        else:
+            content = f"目标服务器返回状态码: {status_code}"
+    except urllib.error.URLError as e:
+        status_code = "N/A"
+        # [SSRF-3] 只显示通用错误信息
+        content = "无法访问目标地址，请检查URL是否正确"
+    except Exception as e:
+        status_code = "N/A"
+        # [SSRF-3] 统一错误提示，不暴露内部信息
+        content = "请求处理异常"
+
+    logger.info("URL抓取 - 用户: %s, URL: %s, 状态码: %s",
+                session["username"], url, status_code)
+
+    return render_template("index.html", user=None,
+                           fetch_url=url,
+                           fetch_status=status_code,
+                           fetch_content=content)
 
 
 if __name__ == "__main__":

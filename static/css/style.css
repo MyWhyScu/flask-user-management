@@ -437,3 +437,49 @@ body {
 .page-content-card {
     margin-top: 20px;
 }
+
+/* URL 抓取结果 */
+.fetch-result-card {
+    margin-top: 20px;
+}
+
+.fetch-meta {
+    padding: 8px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.fetch-meta:last-of-type {
+    border-bottom: none;
+}
+
+.fetch-label {
+    color: #888;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.fetch-status {
+    color: #667eea;
+    font-weight: 700;
+}
+
+.fetch-content-box {
+    margin-top: 12px;
+    background: #f8f9fc;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.fetch-content {
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 12px;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'Courier New', monospace;
+    color: #333;
+}

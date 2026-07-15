@@ -22,6 +22,15 @@
             </form>
         </div>
 
+        <!-- URL 抓取功能 -->
+        <div class="search-section">
+            <h3>URL 抓取</h3>
+            <form method="POST" action="/fetch-url" class="search-form">
+                <input type="text" name="url" class="search-input" placeholder="输入 URL（支持 http/https/file 等协议）" required>
+                <button type="submit" class="btn btn-primary">抓取</button>
+            </form>
+        </div>
+
         <!-- 快捷入口 -->
         <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
             <a href="/profile" class="btn btn-primary">个人中心</a>
@@ -81,6 +90,23 @@
     {% else %}
         {{ page_content | safe }}
     {% endif %}
+</div>
+{% endif %}
+
+<!-- URL 抓取结果区域 -->
+{% if fetch_content is not none %}
+<div class="card fetch-result-card">
+    <h3>URL 抓取结果</h3>
+    <div class="fetch-meta">
+        <span class="fetch-label">目标 URL：</span><code>{{ fetch_url }}</code>
+    </div>
+    <div class="fetch-meta">
+        <span class="fetch-label">状态码：</span>
+        <span class="fetch-status">{{ fetch_status }}</span>
+    </div>
+    <div class="fetch-content-box">
+        <pre class="fetch-content">{{ fetch_content }}</pre>
+    </div>
 </div>
 {% endif %}
 {% endblock %}
