@@ -483,3 +483,43 @@ body {
     font-family: 'Courier New', monospace;
     color: #333;
 }
+
+/* Ping 页面样式 */
+.ping-form {
+    margin-top: 8px;
+}
+
+.ping-result-card {
+    margin-top: 20px;
+}
+
+.console-box {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Courier New', 'Consolas', monospace;
+}
+
+.console-header {
+    background: #2d2d2d;
+    color: #888;
+    padding: 8px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid #333;
+    user-select: none;
+}
+
+.console-output {
+    background: #1a1a1a;
+    color: #00ff00;
+    padding: 14px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 60px;
+    max-height: 400px;
+    overflow-y: auto;
+}

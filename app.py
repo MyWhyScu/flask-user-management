@@ -6,6 +6,8 @@ import time
 import sqlite3
 import urllib.request
 import urllib.error
+import subprocess
+import platform
 from functools import wraps
 from flask import (
     Flask, render_template, request, redirect, session, g, abort
@@ -185,13 +187,12 @@ def index():
         c = conn.cursor()
         sql = "SELECT id, username, email, phone FROM users WHERE username LIKE ? OR email LIKE ?"
         params = (f'%{keyword}%', f'%{keyword}%')
-        print(f"[SQL] {sql} (参数: {params})")
         logger.info(f"执行SQL: {sql}")
         try:
             c.execute(sql, params)
             search_results = c.fetchall()
         except Exception as e:
-            print(f"[SQL ERROR] {e}")
+            logger.warning("SQL查询异常: %s", e)
             search_results = []
         conn.close()
 
@@ -307,7 +308,6 @@ def register():
         c = conn.cursor()
         sql = "INSERT INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)"
         params = (username, password, email, phone)
-        print(f"[SQL] {sql} (参数: {params})")
         logger.info(f"执行SQL: {sql}")
         try:
             c.execute(sql, params)
@@ -341,13 +341,12 @@ def search():
     c = conn.cursor()
     sql = "SELECT id, username, email, phone FROM users WHERE username LIKE ? OR email LIKE ?"
     params = (f'%{keyword}%', f'%{keyword}%')
-    print(f"[SQL] {sql} (参数: {params})")
     logger.info(f"执行SQL: {sql}")
     try:
         c.execute(sql, params)
         results = c.fetchall()
     except Exception as e:
-        print(f"[SQL ERROR] {e}")
+        logger.warning("SQL查询异常: %s", e)
         results = []
     conn.close()
 
@@ -806,6 +805,44 @@ def fetch_url():
                            fetch_url=url,
                            fetch_status=status_code,
                            fetch_content=content)
+
+
+# ============================================================
+# Ping 网络诊断功能
+# ============================================================
+
+@app.route("/ping", methods=["GET", "POST"])
+def ping():
+    """Ping 网络诊断功能（需要登录）"""
+    if "username" not in session:
+        return redirect("/login")
+
+    result = None
+    ip = ""
+
+    if request.method == "POST":
+        ip = request.form.get("ip", "").strip()
+        if ip:
+            # [CI-FIX] 输入校验：仅允许合法 IP 地址和域名（字母、数字、点、连字符）
+            if not re.match(r'^[a-zA-Z0-9\.\-]+$', ip):
+                result = "无效的 IP 地址或域名，仅允许字母、数字、点和连字符"
+            else:
+                try:
+                    # [CI-FIX] 修复命令注入：移除 shell=True，使用参数列表方式调用
+                    # 参数列表方式无需 shell 解释，用户输入仅作为普通参数传递给 ping 进程
+                    result = subprocess.check_output(
+                        ["ping", "-c", "3", ip],
+                        timeout=30,
+                        stderr=subprocess.STDOUT
+                    ).decode("utf-8", errors="replace")
+                except subprocess.CalledProcessError as e:
+                    result = e.output.decode("utf-8", errors="replace")
+                except subprocess.TimeoutExpired as e:
+                    result = "Ping 命令执行超时（30秒）"
+                except Exception as e:
+                    result = f"执行出错: {e}"
+
+    return render_template("ping.html", result=result, ip=ip)
 
 
 if __name__ == "__main__":
