@@ -523,3 +523,26 @@ body {
     max-height: 400px;
     overflow-y: auto;
 }
+
+/* XML 导入页面样式 */
+.xml-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'Courier New', 'Consolas', monospace;
+    line-height: 1.5;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.xml-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.xml-result-card {
+    margin-top: 20px;
+}

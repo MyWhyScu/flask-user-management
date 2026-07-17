@@ -6,6 +6,7 @@ import time
 import sqlite3
 import urllib.request
 import urllib.error
+import json
 import subprocess
 import platform
 from functools import wraps
@@ -843,6 +844,70 @@ def ping():
                     result = f"执行出错: {e}"
 
     return render_template("ping.html", result=result, ip=ip)
+
+
+# ============================================================
+# XML 数据导入功能
+# ============================================================
+
+@app.route("/xml-import", methods=["GET", "POST"])
+def xml_import():
+    """XML 数据导入功能（需要登录）"""
+    if "username" not in session:
+        return redirect("/login")
+
+    result_json = None
+    error = None
+
+    if request.method == "POST":
+        # [XXE-3] 添加 CSRF 校验
+        csrf_token = request.form.get("csrf_token") or ""
+        if csrf_token != session.get("_csrf_token", ""):
+            logger.warning("XML导入CSRF校验失败 - IP: %s", request.remote_addr)
+            abort(403)
+
+        xml_data = request.form.get("xml_data", "").strip()
+        if xml_data:
+            # [XXE-4] XML 大小限制（最大 1MB）
+            if len(xml_data) > 1024 * 1024:
+                error = "XML 数据过长，请控制在 1MB 以内"
+            else:
+                try:
+                    # [XXE-1] 修复：剥离 DOCTYPE 声明（含 ENTITY 定义），阻断外部实体
+                    xml_cleaned = re.sub(r'<!DOCTYPE\s+\S+[^>]*>', '', xml_data, flags=re.DOTALL)
+
+                    # [XXE-1] 修复：使用 ElementTree 解析（默认不解析外部实体）
+                    # 不再手动提取 SYSTEM 路径和 open() 读取文件
+                    import xml.etree.ElementTree as ET
+                    root = ET.fromstring(xml_cleaned)
+
+                    users = []
+                    for user_elem in root.findall('.//user'):
+                        name_elem = user_elem.find('name')
+                        email_elem = user_elem.find('email')
+                        user_data = {}
+                        if name_elem is not None:
+                            user_data['name'] = name_elem.text
+                        if email_elem is not None:
+                            user_data['email'] = email_elem.text
+                        if user_data:
+                            users.append(user_data)
+
+                    result_json = json.dumps(users, ensure_ascii=False, indent=2)
+
+                    # [XXE-4] 添加审计日志
+                    logger.info("XML导入成功 - 用户: %s, 记录数: %d, IP: %s",
+                                session["username"], len(users), request.remote_addr)
+
+                except Exception as e:
+                    # [XXE-2] 修复：不暴露异常细节，统一错误提示
+                    logger.warning("XML导入解析失败 - 用户: %s, IP: %s, 错误: %s",
+                                   session["username"], request.remote_addr, e)
+                    error = "XML 解析失败，请检查 XML 格式是否正确"
+        else:
+            error = "请输入 XML 数据"
+
+    return render_template("xml_import.html", result_json=result_json, error=error)
 
 
 if __name__ == "__main__":
